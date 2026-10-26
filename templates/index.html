@@ -26,10 +26,10 @@
       </div>
 
       <div class="header-actions">
-        <!-- Nobitex Tether Ticker Pill -->
-        <div class="ticker-pill" title="نرخ لحظه‌ای تتر (نوبیتکس)">
+        <!-- Live Multi-Source Tether Ticker Pill (Wallex / Tetherland) -->
+        <div class="ticker-pill" title="نرخ لحظه‌ای تتر (بروزرسانی از والکس و تترلند)">
           <span class="usdt-icon">₮</span>
-          <span id="ticker-tether-val">۹۸,۵۰۰ ت</span>
+          <span id="ticker-tether-val">۲۷۱,۴۰۰ ت</span>
         </div>
 
         <!-- Cloud Backup Status Badge -->
@@ -53,8 +53,8 @@
     <div class="stats-banner">
       <div class="stat-card">
         <div class="stat-info">
-          <div class="stat-label">نرخ تتر (USDT / تومان)</div>
-          <div class="stat-value gold-text" id="stat-tether">۹۸,۵۰۰ تومان</div>
+          <div class="stat-label">نرخ تتر روز بازار (USDT)</div>
+          <div class="stat-value gold-text" id="stat-tether">۲۷۱,۴۰۰ تومان</div>
         </div>
         <div style="font-size: 1.8rem; opacity: 0.8;">🪙</div>
       </div>
@@ -116,6 +116,7 @@
 
           <select id="filter-sort" class="filter-select">
             <option value="lowest_price_asc">مرتب‌سازی: ارزان‌ترین کف قیمت</option>
+            <option value="spread_desc">🎯 بیشترین اختلاف قیمت بازار (شکار سود همکار)</option>
             <option value="lowest_price_desc">گران‌ترین قیمت</option>
             <option value="discount_desc">بیشترین تخفیف / افت قیمت</option>
             <option value="name_asc">حروف الفبا</option>
@@ -145,10 +146,10 @@
           <!-- Quick Service Presets -->
           <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px;">افزودن سریع اجرت و خدمات کارگاه:</div>
           <div class="quote-presets-row">
-            <button class="preset-chip" onclick="addCustomQuoteRow('اجرت اسمبل استاندارد و کابل‌کشی سیستم', 450000)">+ اجرت اسمبل (۴۵۰,۰۰۰ ت)</button>
-            <button class="preset-chip" onclick="addCustomQuoteRow('نصب ویندوز ۱۱ اورجینال، درایورها و برنامه‌ها', 250000)">+ نصب ویندوز و درایور (۲۵۰,۰۰۰ ت)</button>
-            <button class="preset-chip" onclick="addCustomQuoteRow('سرویس دوره ای خمیر سیلیکون و کولینگ', 200000)">+ سرویس خمیر و فن (۲۰۰,۰۰۰ ت)</button>
-            <button class="preset-chip" onclick="addCustomQuoteRow('تست کامل پایداری FurMark و Cinebench', 150000)">+ تست پایداری سخت‌افزار (۱۵۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('اجرت اسمبل حرفه‌ای و مدیریت کابل‌کشی', 1200000)">+ اجرت اسمبل (۱,۲۰۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('نصب ویندوز ۱۱ اورجینال، درایورها و بایوس', 600000)">+ نصب ویندوز و درایور (۶۰۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('سرویس دوره‌ای خمیر حرارتی و فن‌ها', 450000)">+ سرویس خمیر و کولینگ (۴۵۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('تست کامل پایداری FurMark و Cinebench', 300000)">+ تست پایداری سخت‌افزار (۳۰۰,۰۰۰ ت)</button>
           </div>
 
           <!-- Items Container -->

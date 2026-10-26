@@ -16,7 +16,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.database import get_db, SessionLocal, engine, Base
 from app.models import Product, VendorOffer, PriceHistory, AppSetting
-from app.scraper import scraper_engine, fetch_nobitex_tether, detect_store_name
+from app.scraper import scraper_engine, fetch_live_tether, detect_store_name
 from app.backup import (
     export_full_backup_json,
     import_full_backup_json,
@@ -37,14 +37,24 @@ async def scheduled_scrape_task():
     await refresh_tether_rate()
 
 async def refresh_tether_rate():
-    t_res = await fetch_nobitex_tether()
+    t_res = await fetch_live_tether()
     db = SessionLocal()
     try:
+        t_rate = str(t_res.get("tether_toman", 271400))
+        t_src = str(t_res.get("source", "والکس و تترلند"))
+        
         sett = db.query(AppSetting).filter_by(key="tether_irt_rate").first()
         if sett:
-            sett.value = str(t_res.get("tether_toman", 98500))
+            sett.value = t_rate
         else:
-            db.add(AppSetting(key="tether_irt_rate", value=str(t_res.get("tether_toman", 98500))))
+            db.add(AppSetting(key="tether_irt_rate", value=t_rate))
+
+        src_sett = db.query(AppSetting).filter_by(key="tether_source").first()
+        if src_sett:
+            src_sett.value = t_src
+        else:
+            db.add(AppSetting(key="tether_source", value=t_src))
+
         db.commit()
     finally:
         db.close()
@@ -140,6 +150,12 @@ async def lifespan(app: FastAPI):
     status = await check_and_auto_restore_on_startup()
     print(f"AuraTech Startup: {status}")
 
+    # Immediately fetch live Tether exchange rate from active Iranian sources (Wallex / Tetherland)
+    try:
+        await refresh_tether_rate()
+    except Exception as e:
+        print(f"Tether rate init note: {e}")
+
     # Start APScheduler (Every 20 minutes)
     scheduler.add_job(scheduled_scrape_task, "interval", minutes=20, id="auratech_scrape_20m")
     scheduler.start()
@@ -219,6 +235,7 @@ def get_products(
     in_stock_only: Optional[bool] = False,
     sort_by: Optional[str] = "lowest_price_asc",
     discount_only: Optional[bool] = False,
+    hunting_only: Optional[bool] = False,
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
@@ -243,24 +260,31 @@ def get_products(
         )
 
     products = query.all()
+    serialized_products = [p.to_dict(include_history=True) for p in products]
+
+    # Filter by hunting opportunity (price spread >= 3%)
+    if hunting_only:
+        serialized_products = [p for p in serialized_products if p.get("price_spread_percent", 0) >= 3.0]
 
     # Filter by store in memory if requested
     if store and store != "همه":
         filtered = []
-        for p in products:
-            if any(o.store_name == store for o in p.vendor_offers):
+        for p in serialized_products:
+            if any(o.get("store_name") == store for o in p.get("vendor_offers", [])):
                 filtered.append(p)
-        products = filtered
+        serialized_products = filtered
 
     # Sort
     if sort_by == "lowest_price_asc":
-        products.sort(key=lambda p: (not p.in_stock, p.lowest_price or float("inf")))
+        serialized_products.sort(key=lambda p: (not p["in_stock"], p["lowest_price"] or float("inf")))
     elif sort_by == "lowest_price_desc":
-        products.sort(key=lambda p: (p.lowest_price or 0), reverse=True)
+        serialized_products.sort(key=lambda p: (p["lowest_price"] or 0), reverse=True)
     elif sort_by == "discount_desc":
-        products.sort(key=lambda p: (p.change_percent or 0))
+        serialized_products.sort(key=lambda p: (p["change_percent"] or 0))
+    elif sort_by == "spread_desc":
+        serialized_products.sort(key=lambda p: (p.get("price_spread", 0)), reverse=True)
     elif sort_by == "name_asc":
-        products.sort(key=lambda p: p.name_fa)
+        serialized_products.sort(key=lambda p: p["name_fa"])
 
     # Extract all distinct categories, brands, stores for UI filters
     all_products = db.query(Product).all()
@@ -270,8 +294,8 @@ def get_products(
     stores = sorted(list({o.store_name for o in all_offers if o.store_name}))
 
     return {
-        "total": len(products),
-        "products": [p.to_dict(include_history=True) for p in products],
+        "total": len(serialized_products),
+        "products": serialized_products,
         "categories": categories,
         "brands": brands,
         "stores": stores
@@ -457,6 +481,7 @@ async def cron_trigger_keepalive(limit: Optional[int] = None):
 @app.get("/api/market-overview")
 def get_market_overview(db: Session = Depends(get_db)):
     tether_sett = db.query(AppSetting).filter_by(key="tether_irt_rate").first()
+    tether_src_sett = db.query(AppSetting).filter_by(key="tether_source").first()
     last_scrape_sett = db.query(AppSetting).filter_by(key="last_scrape_time").first()
     auto_sync_sett = db.query(AppSetting).filter_by(key="auto_sync_gist").first()
 
@@ -481,13 +506,19 @@ def get_market_overview(db: Session = Depends(get_db)):
     drops = [p.to_dict() for p in products if p.change_percent < 0 and p.in_stock]
     drops.sort(key=lambda x: x["change_percent"])
 
+    # Hunting Opportunities (Top arbitrage spread between stores)
+    product_dicts = [p.to_dict() for p in products if p.in_stock]
+    hunting_deals = [d for d in product_dicts if d.get("price_spread", 0) > 0]
+    hunting_deals.sort(key=lambda x: x.get("price_spread", 0), reverse=True)
+
     return {
-        "tether_toman": int(tether_sett.value) if tether_sett and tether_sett.value else 98500,
-        "tether_source": "نوبیتکس (Nobitex Live)",
+        "tether_toman": int(tether_sett.value) if tether_sett and tether_sett.value else 271400,
+        "tether_source": tether_src_sett.value if tether_src_sett else "والکس و تترلند (Wallex / Tetherland)",
         "last_sync_time": last_scrape_sett.value if last_scrape_sett else datetime.now(timezone.utc).isoformat(),
         "total_products": len(products),
         "total_offers": len(offers),
         "top_price_drops": drops[:5],
+        "hunting_deals": hunting_deals[:5],
         "cheapest_leaderboard": cheapest_leaderboard,
         "cloud_backup_configured": has_cloud_sync,
         "gist_id": gist_id or ""

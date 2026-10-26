@@ -24,6 +24,7 @@ const state = {
   activeCondition: 'همه',
   activeSort: 'lowest_price_asc',
   searchQuery: '',
+  huntingOnly: false,
   quoteItems: [],
   quoteMarginPercent: 12,
   quoteColleagueDiscount: 0,
@@ -92,7 +93,10 @@ async function fetchOverview() {
 async function fetchProducts() {
   try {
     const params = new URLSearchParams();
-    if (state.activeCategory !== 'همه') params.append('category', state.activeCategory);
+    if (state.activeCategory !== 'همه' && state.activeCategory !== '🎯 شکار فرصت‌های آربیتراژ') {
+      params.append('category', state.activeCategory);
+    }
+    if (state.huntingOnly) params.append('hunting_only', 'true');
     if (state.activeBrand !== 'همه') params.append('brand', state.activeBrand);
     if (state.activeStore !== 'همه') params.append('store', state.activeStore);
     if (state.activeCondition !== 'همه') params.append('condition', state.activeCondition);
@@ -158,6 +162,11 @@ function renderOverview() {
     tetherEl.innerText = `${formatPrice(state.overview.tether_toman)} ت`;
   }
 
+  const statTetherEl = document.getElementById('stat-tether');
+  if (statTetherEl && state.overview.tether_toman) {
+    statTetherEl.innerText = `${formatPrice(state.overview.tether_toman)} تومان`;
+  }
+
   const syncTimeEl = document.getElementById('stat-last-sync');
   if (syncTimeEl && state.overview.last_sync_time) {
     const dt = new Date(state.overview.last_sync_time);
@@ -191,7 +200,7 @@ function renderCategoryPills() {
   const container = document.getElementById('category-pills-row');
   if (!container) return;
 
-  const defaultCats = ['همه', 'پردازنده', 'کارت گرافیک', 'کولینگ و دیپکول', 'موس و کیبورد گیمینگ', 'رم و اساسدی', 'مادربرد', 'لپتاپ نو و استوک'];
+  const defaultCats = ['همه', '🎯 شکار فرصت‌های آربیتراژ', 'پردازنده', 'کارت گرافیک', 'کولینگ و دیپکول', 'موس و کیبورد گیمینگ', 'رم و اساسدی', 'مادربرد', 'لپتاپ نو و استوک'];
   const allCats = Array.from(new Set([...defaultCats, ...state.categories]));
 
   container.innerHTML = allCats.map(cat => `
@@ -202,7 +211,13 @@ function renderCategoryPills() {
 }
 
 function selectCategory(cat) {
-  state.activeCategory = cat;
+  if (cat === '🎯 شکار فرصت‌های آربیتراژ') {
+    state.huntingOnly = true;
+    state.activeCategory = cat;
+  } else {
+    state.huntingOnly = false;
+    state.activeCategory = cat;
+  }
   renderCategoryPills();
   fetchProducts();
 }
@@ -252,11 +267,13 @@ function renderProductsGrid() {
       changeBadgeHtml = `<span class="price-change-badge change-neutral">ثابت</span>`;
     }
 
-    // Spread info
+    // Spread & Hunting info
+    const isHuntingDeal = p.price_spread_percent >= 3.0 && p.price_spread >= 300000;
     const spreadHtml = p.price_spread > 0 ? `
-      <div class="spread-tag">
+      <div class="spread-tag" style="${isHuntingDeal ? 'background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.4); padding:4px 8px; border-radius:6px;' : ''}">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        اختلاف بازار: ${formatPrice(p.price_spread)} ت (${toPersianDigits(p.price_spread_percent)}% سود همکار)
+        ${isHuntingDeal ? '<strong style="color:var(--gold-primary);">🎯 شکار آربیتراژ:</strong> ' : 'اختلاف بازار: '}
+        <strong>${formatPrice(p.price_spread)} ت</strong> (${toPersianDigits(p.price_spread_percent)}% سود همکار)
       </div>
     ` : '';
 
