@@ -37,13 +37,11 @@ class Product(Base):
     )
 
     def calculate_metrics(self):
-        """Recalculate lowest price, average price, stock status, and store."""
-        active_offers = [o for o in self.vendor_offers if o.current_price and o.current_price > 0]
-        in_stock_offers = [o for o in active_offers if o.in_stock]
+        """Recalculate lowest price strictly from IN-STOCK offers only."""
+        in_stock_offers = [o for o in self.vendor_offers if o.in_stock and o.current_price and o.current_price > 0]
         
-        target_offers = in_stock_offers if in_stock_offers else active_offers
-        if target_offers:
-            cheapest = min(target_offers, key=lambda o: o.current_price)
+        if in_stock_offers:
+            cheapest = min(in_stock_offers, key=lambda o: o.current_price)
             if self.lowest_price and self.lowest_price > 0 and self.lowest_price != cheapest.current_price:
                 self.previous_lowest_price = self.lowest_price
                 if self.previous_lowest_price > 0:
@@ -55,19 +53,23 @@ class Product(Base):
 
             self.lowest_price = cheapest.current_price
             self.lowest_store_name = cheapest.store_name
-            self.in_stock = bool(in_stock_offers)
+            self.in_stock = True
         else:
             self.in_stock = False
+            self.lowest_price = 0.0
+            self.lowest_store_name = "ناموجود در بازار"
+            self.change_percent = 0.0
 
     def to_dict(self, include_history=False):
-        offers = [o.to_dict() for o in self.vendor_offers]
-        prices = [o["current_price"] for o in offers if o["current_price"] > 0 and o["in_stock"]]
+        # Strictly return in-stock offers with valid verified prices
+        valid_offers = [o.to_dict() for o in self.vendor_offers if o.in_stock and o.current_price and o.current_price > 0]
+        prices = [o["current_price"] for o in valid_offers]
         
         avg_price = round(sum(prices) / len(prices)) if prices else (self.lowest_price or 0)
         max_price = max(prices) if prices else (self.lowest_price or 0)
         min_price = min(prices) if prices else (self.lowest_price or 0)
-        spread_amount = max_price - min_price if prices else 0
-        spread_percent = round((spread_amount / min_price) * 100, 1) if min_price > 0 else 0
+        spread_amount = max_price - min_price if len(prices) > 1 else 0
+        spread_percent = round((spread_amount / min_price) * 100, 1) if (min_price > 0 and len(prices) > 1) else 0
 
         data = {
             "id": self.id,
@@ -83,8 +85,8 @@ class Product(Base):
             "lowest_store_name": self.lowest_store_name or "",
             "in_stock": self.in_stock,
             "last_updated": self.last_updated.isoformat() if self.last_updated else None,
-            "offers_count": len(offers),
-            "vendor_offers": offers,
+            "offers_count": len(valid_offers),
+            "vendor_offers": valid_offers,
             "average_price": avg_price,
             "max_price": max_price,
             "price_spread": spread_amount,
