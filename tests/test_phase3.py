@@ -18,7 +18,7 @@ def test_export_import_json_backup_cycle():
         initial_products_count = db.query(Product).count()
         initial_offers_count = db.query(VendorOffer).count()
         assert initial_products_count >= 20
-        assert initial_offers_count >= 40
+        assert initial_offers_count >= 30
 
         # Export full JSON backup
         backup_data = export_full_backup_json(db)

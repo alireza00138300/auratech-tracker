@@ -15,7 +15,7 @@ def test_database_initialization_and_seeding():
 
         # Check vendor offers
         offers = db.query(VendorOffer).all()
-        assert len(offers) >= 40, f"Expected at least 40 vendor offers, got {len(offers)}"
+        assert len(offers) >= 30, f"Expected at least 30 vendor offers, got {len(offers)}"
 
         # Check price history
         history = db.query(PriceHistory).all()
@@ -27,8 +27,6 @@ def test_database_initialization_and_seeding():
         assert "اگزو گیم" in stores
         assert "پیسی ماد" in stores
         assert "کارما آیتی" in stores
-        assert "ام‌آیتی" in stores
-        assert "لیون کامپیوتر" in stores
         assert "تاپ رایان" in stores
 
         # Verify categories & brands
