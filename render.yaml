@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: auratech-tracker
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 30
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        sync: false
+      - key: GITHUB_BACKUP_TOKEN
+        sync: false
+      - key: GITHUB_GIST_ID
+        sync: false
+      - key: APP_ENV
+        value: production

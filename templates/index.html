@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#08080A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AuraTech">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <link rel="manifest" href="/static/manifest.json">
+  <title>AuraTech Tracker | سامانه پایش هوشمند بازار سخت‌افزار و لپ‌تاپ ایران</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Top Header & Ticker Bar -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand-badge">
+        <div class="brand-logo-icon">AT</div>
+        <div>
+          <h1 class="brand-title gold-gradient-text">AuraTech Tracker</h1>
+          <div class="brand-sub">سامانه پایش هوشمند بازار سخت‌افزار ایران</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Nobitex Tether Ticker Pill -->
+        <div class="ticker-pill" title="نرخ لحظه‌ای تتر (نوبیتکس)">
+          <span class="usdt-icon">₮</span>
+          <span id="ticker-tether-val">۹۸,۵۰۰ ت</span>
+        </div>
+
+        <!-- Cloud Backup Status Badge -->
+        <div class="ticker-pill" id="backup-status-pill" style="display:none;">
+          <span class="status-indicator"></span> بک‌آپ محلی
+        </div>
+
+        <!-- Refresh Button -->
+        <button class="btn-gold" id="btn-sync-all" onclick="triggerScrape()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          بروزرسانی قیمت‌ها
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+
+    <!-- Top Market Stats Banner -->
+    <div class="stats-banner">
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">نرخ تتر (USDT / تومان)</div>
+          <div class="stat-value gold-text" id="stat-tether">۹۸,۵۰۰ تومان</div>
+        </div>
+        <div style="font-size: 1.8rem; opacity: 0.8;">🪙</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">آخرین پایش خودکار</div>
+          <div class="stat-value" id="stat-last-sync">لحظاتی پیش</div>
+        </div>
+        <div style="font-size: 1.8rem; opacity: 0.8;">⏱</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">کالاهای تحت دیده‌بان</div>
+          <div class="stat-value" id="stat-total-products">۲۰ کالا</div>
+        </div>
+        <div style="font-size: 1.8rem; opacity: 0.8;">📦</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-label">پیشتاز کف قیمت بازار</div>
+          <div class="stat-value gold-text" id="cheapest-store-highlight" style="font-size: 1rem;">در حال محاسبه...</div>
+        </div>
+        <div style="font-size: 1.8rem; opacity: 0.8;">🏆</div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 1: MARKET MONITOR ==================== -->
+    <div id="tab-market" class="tab-pane active">
+      <!-- Search & Filters -->
+      <section class="filter-section">
+        <div class="search-box">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="search-input" placeholder="جستجوی سریع قطعه، پردازنده، لپ‌تاپ، دیپکول، بلادی، ریزر...">
+        </div>
+
+        <!-- Category Pills -->
+        <div class="pill-row" id="category-pills-row">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Filter Dropdowns Row -->
+        <div class="filters-dropdown-row">
+          <select id="filter-brand" class="filter-select">
+            <option value="همه">همه برندها</option>
+          </select>
+
+          <select id="filter-store" class="filter-select">
+            <option value="همه">همه فروشگاه‌ها</option>
+          </select>
+
+          <select id="filter-condition" class="filter-select">
+            <option value="همه">همه وضعیت‌ها (نو و استوک)</option>
+            <option value="نو">فقط نو (آکبند)</option>
+            <option value="استوک">فقط استوک اروپایی / اوپن‌باکس</option>
+          </select>
+
+          <select id="filter-sort" class="filter-select">
+            <option value="lowest_price_asc">مرتب‌سازی: ارزان‌ترین کف قیمت</option>
+            <option value="lowest_price_desc">گران‌ترین قیمت</option>
+            <option value="discount_desc">بیشترین تخفیف / افت قیمت</option>
+            <option value="name_asc">حروف الفبا</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Products Grid -->
+      <div class="products-grid" id="products-grid">
+        <!-- Rendered by app.js -->
+      </div>
+    </div>
+
+
+    <!-- ==================== TAB 2: QUICK QUOTE BUILDER ==================== -->
+    <div id="tab-quote" class="tab-pane">
+      <div class="quote-layout">
+        <!-- Items Panel -->
+        <div class="quote-items-panel">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+            <h2 style="font-size: 1.15rem; font-weight: 800;" class="gold-text">لیست قطعات و خدمات پیش‌فاکتور</h2>
+            <button class="btn-secondary" onclick="clearQuote()" style="font-size: 0.75rem; color:#EF4444; border-color: rgba(239,68,68,0.3);">
+              پاک کردن همه
+            </button>
+          </div>
+
+          <!-- Quick Service Presets -->
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px;">افزودن سریع اجرت و خدمات کارگاه:</div>
+          <div class="quote-presets-row">
+            <button class="preset-chip" onclick="addCustomQuoteRow('اجرت اسمبل استاندارد و کابل‌کشی سیستم', 450000)">+ اجرت اسمبل (۴۵۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('نصب ویندوز ۱۱ اورجینال، درایورها و برنامه‌ها', 250000)">+ نصب ویندوز و درایور (۲۵۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('سرویس دوره ای خمیر سیلیکون و کولینگ', 200000)">+ سرویس خمیر و فن (۲۰۰,۰۰۰ ت)</button>
+            <button class="preset-chip" onclick="addCustomQuoteRow('تست کامل پایداری FurMark و Cinebench', 150000)">+ تست پایداری سخت‌افزار (۱۵۰,۰۰۰ ت)</button>
+          </div>
+
+          <!-- Items Container -->
+          <div id="quote-items-list" style="margin-top: 14px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Calculations & Summary Panel -->
+        <div class="quote-summary-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 14px;" class="gold-gradient-text">محاسبه مالی و پیش‌فاکتور مشتری</h3>
+
+          <div style="margin-bottom: 12px; display:flex; justify-content:space-between; font-size: 0.85rem;">
+            <span style="color: var(--text-muted);">جمع کل قطعات و اجرت:</span>
+            <strong id="quote-subtotal-val">۰ تومان</strong>
+          </div>
+
+          <!-- Profit Margin Slider -->
+          <div class="slider-container">
+            <div class="slider-label-row">
+              <span style="color: var(--gold-light);">درصد سود و خدمات اسمبل:</span>
+              <strong class="gold-text" id="quote-margin-display">۱۲٪</strong>
+            </div>
+            <input type="range" min="0" max="25" step="1" value="12" class="gold-slider" id="quote-margin-slider">
+            <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-dim); margin-top:4px;">
+              <span>۰٪ (قیمت همکار)</span>
+              <span>۱۲٪ (استاندارد)</span>
+              <span>۲۵٪ (نهایت حاشیه)</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 12px; display:flex; justify-content:space-between; font-size: 0.85rem;">
+            <span style="color: var(--text-muted);">مبلغ سود و خدمات:</span>
+            <strong id="quote-margin-val" class="gold-text">۰ تومان (۱۲٪)</strong>
+          </div>
+
+          <!-- Fixed Colleague Discount -->
+          <div class="form-group">
+            <label class="form-label">تخفیف همکاری ویژه (تومان):</label>
+            <input type="number" class="form-input" id="quote-discount-input" placeholder="۰">
+          </div>
+
+          <!-- Grand Total Box -->
+          <div style="background: var(--surface-elevated); border: 1px solid var(--gold-primary); border-radius: 12px; padding: 14px; margin: 16px 0; text-align: center;">
+            <div style="font-size: 0.78rem; color: var(--gold-light); margin-bottom: 4px;">مبلغ نهایی قابل پرداخت مشتری:</div>
+            <div style="font-size: 1.6rem; font-weight: 900;" class="gold-text" id="quote-grand-total-val">۰ تومان</div>
+          </div>
+
+          <!-- Action Buttons -->
+          <button class="btn-gold" style="width: 100%; justify-content: center; padding: 12px; font-size: 0.92rem;" onclick="copyQuoteForCustomer()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            کپی پیش‌فاکتور برای مشتری (واتساپ / تلگرام)
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== TAB 3: WATCHLIST MANAGER ==================== -->
+    <div id="tab-manage" class="tab-pane">
+      <div class="quote-layout">
+        <!-- Add Product & Scraper Tester Panel -->
+        <div class="quote-items-panel">
+          <h2 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 12px;" class="gold-text">تست زنده لینک و استخراج هوشمند قیمت</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">
+            آدرس محصول را از دیجیکالا، اگزو گیم، پیسی ماد، کارما آیتی، مقداد آیتی، لیون، تاپ رایان یا تخت جمشید پیست کنید تا موتور ۴ لایه قیمت و عنوان را بلافاصله استخراج کند.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">آدرس اینترنتی کالا (URL):</label>
+            <div style="display:flex; gap: 8px;">
+              <input type="url" id="test-url-input" class="form-input" placeholder="https://exo.ir/product/... یا https://digikala.com/product/dkp-...">
+              <button class="btn-gold" onclick="testScraperUrl()" style="white-space:nowrap; padding: 0 16px;">تست و استخراج</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">سلکتور CSS سفارشی (اختیاری برای سایت‌های متفرقه):</label>
+            <input type="text" id="test-selector-input" class="form-input" placeholder=".price-val یا .final-price">
+          </div>
+
+          <!-- Live Result Box -->
+          <div id="test-url-result" style="display: none; margin: 14px 0;"></div>
+
+          <hr style="border:none; border-top:1px solid rgba(255,255,255,0.08); margin: 20px 0;">
+
+          <!-- Add Product Form -->
+          <form id="new-product-form" onsubmit="saveNewProduct(event)">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px;" class="gold-light">ثبت به عنوان کالای جدید در دیده‌بان</h3>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">نام کالا (فارسی): *</label>
+                <input type="text" id="prod-name-fa" class="form-input" required placeholder="مثال: خنک‌کننده دیپکول LS720">
+              </div>
+              <div class="form-group">
+                <label class="form-label">نام کالا (انگلیسی):</label>
+                <input type="text" id="prod-name-en" class="form-input" placeholder="مثال: DeepCool LS720 ARGB">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">دسته‌بندی: *</label>
+                <select id="prod-category" class="form-input" required>
+                  <option value="پردازنده">پردازنده</option>
+                  <option value="کارت گرافیک">کارت گرافیک</option>
+                  <option value="کولینگ و دیپکول">کولینگ و دیپکول</option>
+                  <option value="موس و کیبورد گیمینگ">موس و کیبورد گیمینگ</option>
+                  <option value="رم و اساسدی">رم و اس‌اس‌دی</option>
+                  <option value="مادربرد">مادربرد</option>
+                  <option value="لپتاپ نو و استوک">لپ‌تاپ نو و استوک</option>
+                  <option value="پاور و کیس">پاور و کیس</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">برند: *</label>
+                <input type="text" id="prod-brand" class="form-input" required placeholder="DeepCool, Razer, Intel...">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">وضعیت فیزیکی:</label>
+                <select id="prod-condition" class="form-input">
+                  <option value="نو">نو (آکبند)</option>
+                  <option value="استوک">استوک / اوپن‌باکس</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">آدرس تصویر (URL):</label>
+                <input type="url" id="prod-image-url" class="form-input" placeholder="https://...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">قیمت اولیه (تومان):</label>
+                <input type="number" id="prod-initial-price" class="form-input" placeholder="خودکار یا دستی">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-gold" style="width: 100%; justify-content: center; padding: 10px;">
+              ذخیره و شروع پایش چندفروشگاهی
+            </button>
+          </form>
+        </div>
+
+        <!-- Tracked Items List Panel -->
+        <div class="quote-summary-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 12px;" class="gold-text">کالاهای تحت پایش دیده‌بان</h3>
+          <div id="manage-products-list" style="max-height: 600px; overflow-y: auto;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================== TAB 4: BACKUP & CLOUD SYNC VAULT ==================== -->
+    <div id="tab-backup" class="tab-pane">
+      <div style="max-width: 900px; margin: 0 auto;">
+
+        <!-- Resilience Banner -->
+        <div style="background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(17,17,21,0.9)); border: 1px solid var(--gold-primary); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+          <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 8px;" class="gold-gradient-text">مرکز پشتیبان‌گیری و ماندگاری اطلاعات (ضد حذف دیتابیس)</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+            در پلن رایگان سرورهای ابری (مانند Render.com)، فایل‌های محلی در زمان ریستارت مخزن حذف می‌شوند. سیستم اوراتک با ۳ لایه حفاظتی هوشمند تضمین می‌کند که هیچ دیتایی هرگز از بین نرود.
+          </p>
+        </div>
+
+        <!-- 3-Action Grid -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <!-- 1-Click JSON Download -->
+          <div class="stat-card" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+            <div>
+              <strong style="font-size: 0.95rem; color: var(--gold-light);">۱. دانلود فایل پشتیبان (JSON)</strong>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">ذخیره فوری کل اطلاعات دیده‌بان و لینک‌ها روی گوشی یا کامپیوتر</p>
+            </div>
+            <a href="/api/backup/export-json" class="btn-gold" style="text-decoration:none; width:100%; justify-content:center;">
+              دانلود بک‌آپ کامل (.json)
+            </a>
+          </div>
+
+          <!-- 1-Click JSON Restore -->
+          <div class="stat-card" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+            <div>
+              <strong style="font-size: 0.95rem; color: var(--gold-light);">۲. بازگردانی دیتابیس از فایل</strong>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">انتخاب فایل .json بک‌آپ قبلی و جایگزینی فوری در دیتابیس</p>
+            </div>
+            <label class="btn-secondary" style="width:100%; text-align:center; cursor:pointer;">
+              انتخاب و بازگردانی فایل بک‌آپ
+              <input type="file" accept=".json" style="display:none;" onchange="uploadRestoreBackup(this)">
+            </label>
+          </div>
+
+          <!-- 1-Click Excel CSV Export -->
+          <div class="stat-card" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+            <div>
+              <strong style="font-size: 0.95rem; color: var(--gold-light);">۳. خروجی لیست قیمت اکسل</strong>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">فایل استاندارد با یونیکد UTF-8 BOM جهت باز شدن بدون بهم‌ریختگی در اکسل</p>
+            </div>
+            <a href="/api/backup/export-csv" class="btn-secondary" style="text-decoration:none; width:100%; text-align:center;">
+              دانلود اکسل لیست قیمت‌ها (.csv)
+            </a>
+          </div>
+        </div>
+
+        <!-- GitHub Gist Automated Persistence -->
+        <div class="quote-items-panel" style="margin-bottom: 24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+            <h3 style="font-size: 1.05rem; font-weight: 800;" class="gold-text">همگام‌سازی ابری با GitHub Gist (پشتیبان‌گیری دائمی ۲۴/۷)</h3>
+            <span style="font-size: 0.72rem; color: #10B981; background: rgba(16,185,129,0.15); padding: 3px 8px; border-radius: 4px;">رایگان و بدون نیاز به کارت بانکی</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+            با وارد کردن توکن شخصی گیت‌هاب (Personal Access Token با دسترسی Gist)، سیستم پس از هر دور پایش، دیتابیس را به طور خودکار در گست خصوصی شما آپدیت می‌کند. در زمان ریستارت رندر نیز دیتابیس خودکار از گست بازیابی خواهد شد!
+          </p>
+
+          <form onsubmit="saveCloudSettings(event)">
+            <div class="form-group">
+              <label class="form-label">توکن اختصاصی گیت‌هاب (GitHub Token):</label>
+              <input type="password" id="setting-gist-token" class="form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">شناسه گست (Gist ID - در صورت خالی بودن، خودکار ساخته می‌شود):</label>
+              <input type="text" id="setting-gist-id" class="form-input" placeholder="مثال: e4b2d189...">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display:flex; align-items:center; gap: 8px; font-size: 0.82rem; cursor:pointer;">
+                <input type="checkbox" id="setting-auto-sync" style="accent-color: var(--gold-primary);">
+                <span>پشتیبان‌گیری خودکار در گست بعد از هر پایش و تغییر کالا</span>
+              </label>
+            </div>
+
+            <div style="display:flex; gap: 10px; flex-wrap: wrap;">
+              <button type="submit" class="btn-gold">ذخیره تنظیمات گیت‌هاب</button>
+              <button type="button" class="btn-secondary" onclick="triggerGistSyncNow()">همگام‌سازی ابری هم‌اکنون (Push to Gist)</button>
+              <button type="button" class="btn-secondary" onclick="triggerGistRestoreNow()">بازیابی فوری از گست (Pull from Gist)</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Cron-Job.org Keep-Alive Webhook -->
+        <div class="quote-items-panel">
+          <h3 style="font-size: 1.05rem; font-weight: 800; margin-bottom: 10px;" class="gold-text">روشن نگه داشتن سرور رندر ۲۴/۷ (Keep-Alive Cron)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
+            سایت رایگان cron-job.org را باز کنید و آدرس وبهوک زیر را تنظیم کنید تا هر ۲۰ دقیقه یکبار فراخوانی شود. این کار مانع از به خواب رفتن سرور Render می‌شود و پایش قیمت‌ها را مداوم انجام می‌دهد:
+          </p>
+
+          <div style="background: var(--surface-elevated); border: 1px solid var(--surface-border); border-radius: 8px; padding: 10px 14px; display:flex; justify-content:space-between; align-items:center;">
+            <code id="cron-webhook-url" style="color: var(--gold-light); font-size: 0.82rem; direction: ltr; font-family: monospace;">
+              https://your-app.onrender.com/api/cron/trigger
+            </code>
+            <button class="btn-secondary" onclick="copyCronUrl()" style="font-size: 0.75rem; padding: 4px 10px;">کپی آدرس</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-tab active" id="nav-market" onclick="switchTab('market')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>پایش بازار</span>
+    </button>
+
+    <button class="nav-tab" id="nav-quote" onclick="switchTab('quote')">
+      <div style="position:relative;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span id="nav-quote-badge" style="display:none; position:absolute; top:-4px; right:-8px; background:var(--gold-primary); color:#08080A; font-size:0.65rem; font-weight:800; border-radius:50%; width:16px; height:16px; line-height:16px; text-align:center;">۰</span>
+      </div>
+      <span>پیش‌فاکتور</span>
+    </button>
+
+    <button class="nav-tab" id="nav-manage" onclick="switchTab('manage')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>مدیریت کالا</span>
+    </button>
+
+    <button class="nav-tab" id="nav-backup" onclick="switchTab('backup')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>بک‌آپ و ابر</span>
+    </button>
+  </nav>
+
+  <!-- Add Offer Modal -->
+  <div class="modal-overlay" id="modal-add-offer">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="gold-text" style="font-size: 1.05rem;">افزودن لینک فروشگاه جدید به کالا</h3>
+        <button class="modal-close-btn" onclick="closeAddOfferModal()">✕</button>
+      </div>
+
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+        کالای انتخابی: <strong id="modal-offer-prod-title" style="color: var(--text-main);"></strong>
+      </div>
+
+      <form onsubmit="submitNewOffer(event)">
+        <div class="form-group">
+          <label class="form-label">آدرس لینک کالا در فروشگاه (URL): *</label>
+          <input type="url" id="modal-offer-url" class="form-input" required placeholder="https://exo.ir/... یا https://pcmod.ir/...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">نام فروشگاه (در صورت خالی بودن، خودکار از دامنه تشخیص داده می‌شود):</label>
+          <input type="text" id="modal-offer-store" class="form-input" placeholder="اگزو گیم، پیسی ماد، کارما آیتی...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">سلکتور CSS سفارشی (اختیاری):</label>
+          <input type="text" id="modal-offer-selector" class="form-input" placeholder=".price .amount">
+        </div>
+
+        <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+          <button type="button" class="btn-secondary" onclick="closeAddOfferModal()">انصراف</button>
+          <button type="submit" class="btn-gold">ثبت و پایش فوری</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
